@@ -121,12 +121,12 @@
                 },
                 "resources": {
                     "requests": {
-                        "cpu" : "${BUILD_CPU_REQUEST}",
-                        "memory": "${BUILD_MEM_REQUEST}"
+                        "cpu" : "${DEPLOY_CPU_REQUEST}",
+                        "memory": "${DEPLOY_MEM_REQUEST}"
                     },
                     "limits": {
-                        "cpu" : "${BUILD_CPU_LIMIT}",
-                        "memory": "${BUILD_MEM_LIMIT}"
+                        "cpu" : "${DEPLOY_CPU_LIMIT}",
+                        "memory": "${DEPLOY_MEM_LIMIT}"
                     }
                },
                 "env": [
@@ -166,25 +166,25 @@
       "value": "openshift"
     },
     {
-      "name": "BUILD_MEM_LIMIT",
+      "name": "DEPLOY_MEM_LIMIT",
       "description": "Maximum amount of memory the container can use.",
       "required": true,
       "value": "1536Mi"
     },
     {
-      "name": "BUILD_MEM_REQUEST",
+      "name": "DEPLOY_MEM_REQUEST",
       "description": "The requested memory for a build",
       "value": "512Mi",
       "required": true
     },
     {
-      "name": "BUILD_CPU_LIMIT",
+      "name": "DEPLOY_CPU_LIMIT",
       "description": "The limit of CPU to allow for a build",
       "value":"1000m",
       "required":true
     },
     {
-      "name": "BUILD_CPU_REQUEST",
+      "name": "DEPLOY_CPU_REQUEST",
       "description": "The requested CPU for a build.",
       "value": "500m",
       "required": true
