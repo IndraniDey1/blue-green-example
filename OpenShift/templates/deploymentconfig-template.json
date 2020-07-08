@@ -207,6 +207,12 @@
       "description": "Set this to the relative path to your project if it is not in the root of your repository."
     },
     {
+      "name": "VERSION_NUMBER",
+      "description": "Version of deployment.",
+      "value": "1.0",
+      "required":true
+    },
+    {
       "name": "GITHUB_SECRET",
       "displayName": "GitHub Webhook Secret",
       "description": "Github trigger secret.  A difficult to guess string encoded as part of the webhook URL.  Not encrypted.",
