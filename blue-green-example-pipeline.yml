@@ -1,0 +1,190 @@
+---
+apiVersion: v1
+kind: Template
+labels:
+  application: httpd-blue-green-pipeline
+metadata:
+  name: httpd-blue-green-pipeline
+objects:
+  -
+    apiVersion: v1
+    kind: BuildConfig
+    metadata:
+      labels:
+        build: httpd-blue-green-pipeline
+      name: httpd-blue-green-pipeline
+    spec:
+      runPolicy: Serial
+      source: {}
+      strategy:
+        jenkinsPipelineStrategy:
+          jenkinsfile: |-
+              try {
+                 timeout(time: 15, unit: 'MINUTES') {
+                    def project = ""
+                        def gitURL = "${GIT_REPO_URL}"
+                        def gitBranch = "${GIT_REPO_BRANCH}"
+                        def gitCommit = "${GIT_COMMIT}"
+                        def gitContext = "${GIT_CONTEXT_DIR}"
+                        def microName = "${MICROSERVICE_NAME}"
+                        def appBlueName = "${APPLICATION_BLUE_NAME}"
+                        def appGreenName = "${APPLICATION_GREEN_NAME}"
+                        def appID = "${APPLICATION_ID}"
+                        def cpuRequest = "${CPU_REQUEST}"
+                        def cpuLimit = "${CPU_LIMIT}"
+                        def memRequest = "${MEM_REQUEST}"
+                        def memLimit = "${MEM_LIMIT}"
+                        def replicas = "${NUM_REPLICAS}"
+                        def version = "${VERSION_NUMBER}"
+                    node {
+                      project = "${env.PROJECT_NAME}"
+
+                      stage('Create BuildConfig httpd-blue-build') {
+                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                   sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=${gitBranch} -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appBlueName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                      }
+
+                      stage('Create BuildConfig httpd-green-build') {
+                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                   sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=${gitBranch} -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                      }
+
+                      stage('Create DeploymentConfig httpd-blue-deploymentconfig') {
+                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                   sh "oc new-app -f OpenShift/templates/deploymentconfig-template.json -p GIT_COMMIT=${gitCommit} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appBlueName} -p APPLICATION_ID=${appID} -p DEPLOY_CPU_REQUEST=${cpuRequest} -p DEPLOY_CPU_LIMIT=${cpuLimit} -p DEPLOY_MEM_REQUEST=${memRequest} -p DEPLOY_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -p NUM_REPLICAS=0 -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                      }
+
+                      stage('Create DeploymentConfig httpd-green-deploymentconfig') {
+                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                   sh "oc new-app -f OpenShift/templates/deploymentconfig-template.json -p GIT_COMMIT=${gitCommit} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p DEPLOY_CPU_REQUEST=${cpuRequest} -p DEPLOY_CPU_LIMIT=${cpuLimit} -p DEPLOY_MEM_REQUEST=${memRequest} -p DEPLOY_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -p NUM_REPLICAS=0 -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                      }
+                    }
+
+                    stage('Build HTTPD Blue Container Image') {
+                      parallel (
+                        "httpdbluebuild": {
+                          node {
+                            openshiftBuild buildConfig: "httpd-blue-build", namespace: project
+                          }
+                        }
+                      )
+                    }
+                    stage('Build HTTPD Green Container Image') {
+                      parallel (
+                        "httpdgreenbuild": {
+                          node {
+                            openshiftBuild buildConfig: "httpd-green-build", namespace: project
+                          }
+                        }
+                      )
+                    }
+
+                    node {
+                      stage('Scale & Run HTTPD Blue Application') {
+                        sh "oc scale dc ${appBlueName} -n ${project} --replicas=${replicas}"
+                      }
+                   }
+                    node {
+                      stage('Scale & Run HTTPD Green Application') {
+                        sh "oc scale dc ${appGreenName} -n ${project} --replicas=${replicas}"
+                      }
+                   }
+              } catch (err) {
+                 echo "in catch block"
+                 echo "Caught: ${err}"
+                 currentBuild.result = 'FAILURE'
+                 throw err
+              }
+        type: JenkinsPipeline
+      triggers:
+        -
+          github:
+            secret: "${GITHUB_TRIGGER_SECRET}"
+          type: GitHub
+        -
+          generic:
+            secret: "${GENERIC_TRIGGER_SECRET}"
+          type: Generic
+parameters:
+  -
+    description: "Blue/Green HTTPD example"
+    name: GIT_REPO_URL
+    required: true
+    value: "https://github.com/Freddy-Montero/blue-green-example.git"
+  -
+    description: "What branch to use from GIT (defaults to main)"
+    name: GIT_REPO_BRANCH
+    required: true
+    value: master
+  -
+    description: "What commit to use from GIT"
+    name: GIT_COMMIT
+    required: true
+    value: HEAD
+  -
+    description: "Context directory which gives path from above repository down to its root"
+    name: GIT_CONTEXT_DIR
+    required: false
+    value: ""
+  -
+    description: "A difficult to guess string encoded as part of the webhook URL.  Not encrypted."
+    displayName: "GitHub Webhook Secret"
+    from: "[a-zA-Z0-9]{40}"
+    generate: expression
+    name: GITHUB_SECRET
+  -
+    description: "A secret string used to configure the Generic webhook."
+    displayName: "Generic Webhook Secret,"
+    from: "[a-zA-Z0-9]{40}"
+    generate: expression
+    name: GENERIC_WEBHOOK_SECRET
+  -
+    description: "Name of the microservice"
+    name: MICROSERVICE_NAME
+    required: true
+    value: blue-green
+  -
+    description: "Name of the Blue application"
+    name: APPLICATION_BLUE_NAME
+    required: true
+    value: blue-app
+  -
+    description: "Name of the Green application"
+    name: APPLICATION_GREEN_NAME
+    required: true
+    value: green-app
+  -
+    description: "ID of the application"
+    name: APPLICATION_ID
+    required: true
+    value: httpd-blue-green
+  -
+    description: "The requested CPU for a build or deployment"
+    name: CPU_REQUEST
+    required: true
+    value: 1000m
+  -
+    description: "The limit of CPU to allow for a build or deployment"
+    name: CPU_LIMIT
+    required: true
+    value: 1000m
+  -
+    description: "The requested memory for a build or deployment"
+    name: MEM_REQUEST
+    required: true
+    value: 1500Mi
+  -
+    description: "The limit of memory to allow for a build or deployment"
+    name: MEM_LIMIT
+    required: true
+    value: 1500Mi
+  -
+    description: "Version of deployment"
+    name: VERSION_NUMBER
+    required: true
+    value: "1.0"
+  -
+    description: "Number of containers to scale to, via deploymentconfig"
+    name: NUM_REPLICAS
+    required: true
+    value: "1"
