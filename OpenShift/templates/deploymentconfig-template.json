@@ -31,6 +31,7 @@
             "targetPort": 8080
           }
         ],
+        "replicas": "${NUM_REPLICAS}",
         "selector": {
           "name": "${APPLICATION_NAME}"
         }
@@ -207,16 +208,22 @@
       "description": "Set this to the relative path to your project if it is not in the root of your repository."
     },
     {
+      "name": "GIT_COMMIT",
+      "description": "Git commit of image.",
+      "value": "HEAD",
+      "required":true
+    },
+    {
       "name": "VERSION_NUMBER",
       "description": "Version of deployment.",
       "value": "1.0",
       "required":true
     },
     {
-      "name": "GIT_COMMIT",
-      "description": "Git commit of image.",
-      "value": "HEAD",
-      "required":true
+      "name": "NUM_REPLICAS",
+      "value": "1",
+      "description": "Initial number of replicas to deploy",
+      "required": true
     },
     {
       "name": "GITHUB_SECRET",
