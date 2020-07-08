@@ -59,7 +59,7 @@
         "output": {
           "to": {
             "kind": "ImageStreamTag",
-            "name": "${APPLICATION_NAME}:latest"
+            "name": "${APPLICATION_NAME}-imagestream:latest"
           }
         },
         "resources": {

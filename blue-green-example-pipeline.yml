@@ -58,25 +58,14 @@ objects:
                  checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
                    sh "oc new-app -f OpenShift/templates/deploymentconfig-template.json -p GIT_COMMIT=${gitCommit} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p DEPLOY_CPU_REQUEST=${cpuRequest} -p DEPLOY_CPU_LIMIT=${cpuLimit} -p DEPLOY_MEM_REQUEST=${memRequest} -p DEPLOY_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -p NUM_REPLICAS=0 -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
                       }
-                    }
 
-                    stage('Build HTTPD Blue Container Image') {
-                      parallel (
-                        "httpdbluebuild": {
-                          node {
-                            openshiftBuild buildConfig: "httpd-blue-build", namespace: project
-                          }
-                        }
-                      )
-                    }
-                    stage('Build HTTPD Green Container Image') {
-                      parallel (
-                        "httpdgreenbuild": {
-                          node {
-                            openshiftBuild buildConfig: "httpd-green-build", namespace: project
-                          }
-                        }
-                      )
+                      stage('Build HTTPD Blue Container Image') {
+                  sh "oc start-build ${appBlueName}"
+                      }
+
+                      stage('Build HTTPD Green Container Image') {
+                  sh "oc start-build ${appGreenName}"
+                      }
                     }
 
                     node {
