@@ -170,6 +170,12 @@
       "required":true
     },
     {
+      "name": "GIT_COMMIT",
+      "description": "Git commit of image.",
+      "value": "HEAD",
+      "required":true
+    },
+    {
       "name": "GITHUB_SECRET",
       "displayName": "GitHub Webhook Secret",
       "description": "Github trigger secret.  A difficult to guess string encoded as part of the webhook URL.  Not encrypted.",
