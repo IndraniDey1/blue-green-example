@@ -46,7 +46,7 @@ objects:
 
                       stage('Create BuildConfig httpd-green-build') {
                  checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
-                   sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=${gitBranch} -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                   sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=green -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
                       }
 
                       stage('Create DeploymentConfig httpd-blue-deploymentconfig') {
@@ -89,6 +89,7 @@ objects:
                         sh "oc scale dc ${appGreenName} -n ${project} --replicas=${replicas}"
                       }
                    }
+                }
               } catch (err) {
                  echo "in catch block"
                  echo "Caught: ${err}"
@@ -172,12 +173,12 @@ parameters:
     description: "The requested memory for a build or deployment"
     name: MEM_REQUEST
     required: true
-    value: 1500Mi
+    value: 1536Mi
   -
     description: "The limit of memory to allow for a build or deployment"
     name: MEM_LIMIT
     required: true
-    value: 1500Mi
+    value: 1536Mi
   -
     description: "Version of deployment"
     name: VERSION_NUMBER
