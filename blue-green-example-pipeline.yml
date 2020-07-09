@@ -96,38 +96,56 @@ objects:
                       }
 
                       stage('Build HTTPD Blue Container Image') {
-                        input "Build/Rebuild Blue Application"
-                        sh "oc start-build ${appBlueName} |awk '{print \$1}'> result.txt"
-                        waitUntil {
-                          script {
-                            def buildnum = readFile('result.txt').trim()
-                            def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
-                            def r = readFile('buildst.txt').trim()
-                            r == "Complete"
+                        userInput = input(message: 'Do you wish to Build/Rebuild?', ok: 'Proceed',
+                        parameters: [booleanParam(defaultValue: false,
+                        description: 'Ticking YES will start a build',
+                        name: 'YES?')])
+                        sh "echo ${userInput} > userInput.txt"
+                        t = readFile('userInput.txt').trim()
+                        if (t == "true") {
+                          sh "oc start-build ${appBlueName} |awk '{print \$1}'> result.txt"
+                          waitUntil {
+                            script {
+                              def buildnum = readFile('result.txt').trim()
+                              def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
+                              def r = readFile('buildst.txt').trim()
+                              r == "Complete"
+                            }
                           }
+                        } else if (t == "false") {
+                            echo "Skipping"
                         }
                       }
 
                       stage('Build HTTPD Green Container Image') {
-                        input "Build/Rebuild Green Application"
-                        sh "oc start-build ${appGreenName} |awk '{print \$1}'> result.txt"
-                        waitUntil {
-                          script {
-                            def buildnum = readFile('result.txt').trim()
-                            def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
-                            def r = readFile('buildst.txt').trim()
-                            r == "Complete"
+                        userInput = input(message: 'Do you wish to Build/Rebuild?', ok: 'Proceed',
+                        parameters: [booleanParam(defaultValue: false,
+                        description: 'Ticking YES will start a build',
+                        name: 'YES?')])
+                        sh "echo ${userInput} > userInput.txt"
+                        t = readFile('userInput.txt').trim()
+                        if (t == "true") {
+                          sh "oc start-build ${appGreenName} |awk '{print \$1}'> result.txt"
+                          waitUntil {
+                            script {
+                              def buildnum = readFile('result.txt').trim()
+                              def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
+                              def r = readFile('buildst.txt').trim()
+                              r == "Complete"
+                            }
                           }
+                        } else if (t == "false") {
+                            echo "Skipping"
                         }
                       }
 
-                      stage('Scale HTTPD Blue Application') {
-                        sh "oc scale dc ${appBlueName} --replicas=${replicas}"
-                      }
+//                      stage('Scale HTTPD Blue Application') {
+//                        sh "oc scale dc ${appBlueName} --replicas=${replicas}"
+//                      }
 
-                      stage('Scale HTTPD Green Application') {
-                        sh "oc scale dc ${appGreenName} --replicas=${replicas}"
-                      }
+//                      stage('Scale HTTPD Green Application') {
+//                        sh "oc scale dc ${appGreenName} --replicas=${replicas}"
+//                      }
 
                       stage('Determine Active Application Color ') {
                         sh "oc get route app -o jsonpath='{ .spec.to.name }' > activesvc.txt"
@@ -142,8 +160,17 @@ objects:
                       }
 
                       stage('Switch to different Application Color') {
-                        input "Switch Application"
-                        sh 'oc patch route app -p \'{"spec":{"to":{"name":"' + dest + '"}}}\''
+                        userInput = input(message: 'Do you wish to switch?', ok: 'Proceed',
+                        parameters: [booleanParam(defaultValue: false,
+                        description: 'Ticking YES will switch application',
+                        name: 'YES?')])
+                        sh "echo ${userInput} > userInput.txt"
+                        t = readFile('userInput.txt').trim()
+                        if (t == "true") {
+                          sh 'oc patch route app -p \'{"spec":{"to":{"name":"' + dest + '"}}}\''
+                        } else if (t == "false") {
+                            echo "Skipping"
+                        }
                       }
                     }
                  }
