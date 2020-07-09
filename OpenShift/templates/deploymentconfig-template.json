@@ -44,7 +44,7 @@
         "name": "${APPLICATION_NAME}"
       },
       "spec": {
-        "host": "${APPLICATION_NAME}",
+        "host": "",
         "to": {
           "kind": "Service",
           "name": "${APPLICATION_NAME}"

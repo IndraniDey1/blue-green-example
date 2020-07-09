@@ -84,7 +84,7 @@ objects:
                       }
 
                       stage('Expose Vanity URL Route Application') {
-                        sh "oc get route/app --template='{{ .spec.host }}' > route.txt"
+                        sh "oc get route app |egrep -v NAME |awk '{print \$1}' > route.txt"
                         route = readFile('route.txt').trim()
                         if (route == "app") {
                           echo "Vanity URL already deployed"
