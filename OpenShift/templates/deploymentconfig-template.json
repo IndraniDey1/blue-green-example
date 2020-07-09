@@ -38,6 +38,20 @@
       }
     },
     {
+      "kind": "Route",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "${APPLICATION_NAME}"
+      },
+      "spec": {
+        "host": "${APPLICATION_NAME}",
+        "to": {
+          "kind": "Service",
+          "name": "${APPLICATION_NAME}"
+        }
+      }
+    },
+    {
       "kind": "DeploymentConfig",
       "apiVersion": "v1",
       "metadata": {
