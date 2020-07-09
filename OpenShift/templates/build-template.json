@@ -77,9 +77,6 @@
             "type": "ImageChange"
           },
           {
-            "type": "ConfigChange"
-          },
-          {
             "type": "GitHub",
             "github": {
               "secret": "${GITHUB_SECRET}"

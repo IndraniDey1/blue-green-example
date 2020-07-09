@@ -40,45 +40,111 @@ objects:
                       project = "${env.PROJECT_NAME}"
 
                       stage('Create BuildConfig httpd-blue-build') {
-                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
-                   sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=${gitBranch} -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appBlueName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        sh "oc get bc/${appBlueName} |grep -v NAME|awk '{print \$1}' > bc.txt"
+                        bluebc = readFile('bc.txt').trim()
+                        if (bluebc == "${appBlueName}") {
+                          echo "Blue BuildConfig already deployed"
+                        } else if (bluebc == "") {
+                            checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                            sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=${gitBranch} -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appBlueName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        }
                       }
 
                       stage('Create BuildConfig httpd-green-build') {
-                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
-                   sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=green -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        sh "oc get bc/${appGreenName} |grep -v NAME|awk '{print \$1}' > bc.txt"
+                        greenbc = readFile('bc.txt').trim()
+                        if (greenbc == "${appGreenName}") {
+                          echo "Green BuildConfig already deployed"
+                        } else if (greenbc == "") {
+                            checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                            sh "oc new-app -f OpenShift/templates/build-template.json -p GIT_REPO_URL=${gitURL} -p GIT_REPO_BRANCH=green -p GIT_COMMIT=${gitCommit} -p GIT_CONTEXT_DIR=${gitContext} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p BUILD_CPU_REQUEST=${cpuRequest} -p BUILD_CPU_LIMIT=${cpuLimit} -p BUILD_MEM_REQUEST=${memRequest} -p BUILD_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        }
                       }
 
                       stage('Create DeploymentConfig httpd-blue-deploymentconfig') {
-                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
-                   sh "oc new-app -f OpenShift/templates/deploymentconfig-template.json -p GIT_COMMIT=${gitCommit} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appBlueName} -p APPLICATION_ID=${appID} -p DEPLOY_CPU_REQUEST=${cpuRequest} -p DEPLOY_CPU_LIMIT=${cpuLimit} -p DEPLOY_MEM_REQUEST=${memRequest} -p DEPLOY_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -p NUM_REPLICAS=0 -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        sh "oc get dc/${appBlueName} |grep -v NAME|awk '{print \$1}' > dc.txt"
+                        bluedc = readFile('dc.txt').trim()
+                        if (bluedc == "${appBlueName}") {
+                          echo "Blue DeploymentConfig already deployed"
+                        } else if (bluedc == "") {
+                            checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                            sh "oc new-app -f OpenShift/templates/deploymentconfig-template.json -p GIT_COMMIT=${gitCommit} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appBlueName} -p APPLICATION_ID=${appID} -p DEPLOY_CPU_REQUEST=${cpuRequest} -p DEPLOY_CPU_LIMIT=${cpuLimit} -p DEPLOY_MEM_REQUEST=${memRequest} -p DEPLOY_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -p NUM_REPLICAS=0 -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        }
                       }
 
                       stage('Create DeploymentConfig httpd-green-deploymentconfig') {
-                 checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
-                   sh "oc new-app -f OpenShift/templates/deploymentconfig-template.json -p GIT_COMMIT=${gitCommit} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p DEPLOY_CPU_REQUEST=${cpuRequest} -p DEPLOY_CPU_LIMIT=${cpuLimit} -p DEPLOY_MEM_REQUEST=${memRequest} -p DEPLOY_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -p NUM_REPLICAS=0 -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        sh "oc get dc/${appGreenName} |grep -v NAME|awk '{print \$1}' > dc.txt"
+                        greendc = readFile('dc.txt').trim()
+                        if (greendc == "${appGreenName}") {
+                          echo "Green DeploymentConfig already deployed"
+                        } else if (greendc == "") {
+                            checkout([$class: "GitSCM", branches: [[name: "*/${gitBranch}"]], doGenerateSubmoduleConfigurations: false, extensions: [[$class: "RelativeTargetDirectory", relativeTargetDir: "${gitContext}"]], submoduleCfg: [], userRemoteConfigs: [[url: "${gitURL}"]]])
+                            sh "oc new-app -f OpenShift/templates/deploymentconfig-template.json -p GIT_COMMIT=${gitCommit} -p MICROSERVICE_NAME=${microName} -p APPLICATION_NAME=${appGreenName} -p APPLICATION_ID=${appID} -p DEPLOY_CPU_REQUEST=${cpuRequest} -p DEPLOY_CPU_LIMIT=${cpuLimit} -p DEPLOY_MEM_REQUEST=${memRequest} -p DEPLOY_MEM_LIMIT=${memLimit} -p VERSION_NUMBER=${version} -p NUM_REPLICAS=0 -n ${project} --dry-run -o yaml | oc apply -f - -n ${project}"
+                        }
+                      }
+
+                      stage('Expose Vanity URL Route Application') {
+                        sh "oc get route/app --template='{{ .spec.host }}' > route.txt"
+                        route = readFile('route.txt').trim()
+                        if (route == "app") {
+                          echo "Vanity URL already deployed"
+                        } else if (route == "") {
+                            sh "oc get route ${appBlueName} --template='{{ .spec.host }}' |cut -f2- -d. > domain.txt"
+                            subdomain = readFile('domain.txt').trim()
+                            sh "oc expose svc/${appBlueName} --name=app --hostname=app.${subdomain}"
+                        }
                       }
 
                       stage('Build HTTPD Blue Container Image') {
-                  sh "oc start-build ${appBlueName}"
+                        sh "oc start-build ${appBlueName} |awk '{print \$1}'> result.txt"
+                        waitUntil {
+                          script {
+                            def buildnum = readFile('result.txt').trim()
+                            def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
+                            def r = readFile('buildst.txt').trim()
+                            r == "Complete"
+                          }
+                        }
                       }
 
                       stage('Build HTTPD Green Container Image') {
-                  sh "oc start-build ${appGreenName}"
+                        sh "oc start-build ${appGreenName} |awk '{print \$1}'> result.txt"
+                        waitUntil {
+                          script {
+                            def buildnum = readFile('result.txt').trim()
+                            def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
+                            def r = readFile('buildst.txt').trim()
+                            r == "Complete"
+                          }
+                        }
+                      }
+
+                      stage('Scale HTTPD Blue Application') {
+                        sh "oc scale dc ${appBlueName} --replicas=${replicas}"
+                      }
+
+                      stage('Scale HTTPD Green Application') {
+                        sh "oc scale dc ${appGreenName} --replicas=${replicas}"
+                      }
+
+                      stage('Determine Active Application Color ') {
+                        sh "oc get route app --template='{{ .spec.host }}' > activesvc.txt"
+                        active = readFile('activesvc.txt').trim()
+                          if (active == "green") {
+                            dest = "blue"
+                          } else if (active == "blue") {
+                              dest = "green"
+                          }
+                        echo "Active Application: " + active
+                        echo "Destination Application: " + dest
+                      }
+
+                      stage('Switch to different Application Color') {
+                        input "Switch Application"
+                        sh 'oc patch route app -p \'{"spec":{"to":{"name":"' + dest + '"}}}\''
                       }
                     }
-
-                    node {
-                      stage('Scale & Run HTTPD Blue Application') {
-                        sh "oc scale dc ${appBlueName} -n ${project} --replicas=${replicas}"
-                      }
-                   }
-                    node {
-                      stage('Scale & Run HTTPD Green Application') {
-                        sh "oc scale dc ${appGreenName} -n ${project} --replicas=${replicas}"
-                      }
-                   }
-                }
+                 }
               } catch (err) {
                  echo "in catch block"
                  echo "Caught: ${err}"
