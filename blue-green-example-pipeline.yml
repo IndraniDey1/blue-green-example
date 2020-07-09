@@ -96,6 +96,7 @@ objects:
                       }
 
                       stage('Build HTTPD Blue Container Image') {
+                        input "Build/Rebuild Blue Application"
                         sh "oc start-build ${appBlueName} |awk '{print \$1}'> result.txt"
                         waitUntil {
                           script {
@@ -108,6 +109,7 @@ objects:
                       }
 
                       stage('Build HTTPD Green Container Image') {
+                        input "Build/Rebuild Green Application"
                         sh "oc start-build ${appGreenName} |awk '{print \$1}'> result.txt"
                         waitUntil {
                           script {
@@ -128,13 +130,13 @@ objects:
                       }
 
                       stage('Determine Active Application Color ') {
-                        sh "oc get route app --template='{{ .spec.host }}' > activesvc.txt"
+                        sh "oc get route app -o jsonpath='{ .spec.to.name }' > activesvc.txt"
                         active = readFile('activesvc.txt').trim()
-                          if (active == "green") {
-                            dest = "blue"
-                          } else if (active == "blue") {
-                              dest = "green"
-                          }
+                        if (active == "${appBlueName}") {
+                          dest = "${appGreenName}"
+                        } else if (active == "${appGreenName}") {
+                            dest = "${appBlueName}"
+                        }
                         echo "Active Application: " + active
                         echo "Destination Application: " + dest
                       }
