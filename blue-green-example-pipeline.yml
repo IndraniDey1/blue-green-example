@@ -139,14 +139,6 @@ objects:
                         }
                       }
 
-//                      stage('Scale HTTPD Blue Application') {
-//                        sh "oc scale dc ${appBlueName} --replicas=${replicas}"
-//                      }
-
-//                      stage('Scale HTTPD Green Application') {
-//                        sh "oc scale dc ${appGreenName} --replicas=${replicas}"
-//                      }
-
                       stage('Determine Active Application Color ') {
                         sh "oc get route app -o jsonpath='{ .spec.to.name }' > activesvc.txt"
                         active = readFile('activesvc.txt').trim()
