@@ -154,7 +154,7 @@ objects:
                       stage('Switch Application Branch') {
                         userInput = input(message: 'Do you wish to switch?', ok: 'Proceed',
                         parameters: [booleanParam(defaultValue: false,
-                        description: "Ticking YES will switch application branch from the ${active} to the ${dest}",
+                        description: "Ticking YES will switch application from the ${active} branch to the ${dest} branch",
                         name: 'YES?')])
                         sh "echo ${userInput} > userInput.txt"
                         t = readFile('userInput.txt').trim()
