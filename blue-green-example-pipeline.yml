@@ -30,6 +30,7 @@ objects:
                         def appBlueName = "${APPLICATION_BLUE_NAME}"
                         def appGreenName = "${APPLICATION_GREEN_NAME}"
                         def appID = "${APPLICATION_ID}"
+                        def appRoute = "${APPLICATION_ROUTE}"
                         def cpuRequest = "${CPU_REQUEST}"
                         def cpuLimit = "${CPU_LIMIT}"
                         def memRequest = "${MEM_REQUEST}"
@@ -39,7 +40,7 @@ objects:
                     node {
                       project = "${env.PROJECT_NAME}"
 
-                      stage('Create BuildConfig httpd-blue-build') {
+                      stage('Create Blue-App BuildConfig') {
                         sh "oc get bc/${appBlueName} |grep -v NAME|awk '{print \$1}' > bc.txt"
                         bluebc = readFile('bc.txt').trim()
                         if (bluebc == "${appBlueName}") {
@@ -50,7 +51,7 @@ objects:
                         }
                       }
 
-                      stage('Create BuildConfig httpd-green-build') {
+                      stage('Create Green-App BuildConfig') {
                         sh "oc get bc/${appGreenName} |grep -v NAME|awk '{print \$1}' > bc.txt"
                         greenbc = readFile('bc.txt').trim()
                         if (greenbc == "${appGreenName}") {
@@ -61,7 +62,7 @@ objects:
                         }
                       }
 
-                      stage('Create DeploymentConfig httpd-blue-deploymentconfig') {
+                      stage('Create Blue-App DeploymentConfig') {
                         sh "oc get dc/${appBlueName} |grep -v NAME|awk '{print \$1}' > dc.txt"
                         bluedc = readFile('dc.txt').trim()
                         if (bluedc == "${appBlueName}") {
@@ -72,7 +73,7 @@ objects:
                         }
                       }
 
-                      stage('Create DeploymentConfig httpd-green-deploymentconfig') {
+                      stage('Create Green-App DeploymentConfig') {
                         sh "oc get dc/${appGreenName} |grep -v NAME|awk '{print \$1}' > dc.txt"
                         greendc = readFile('dc.txt').trim()
                         if (greendc == "${appGreenName}") {
@@ -83,19 +84,19 @@ objects:
                         }
                       }
 
-                      stage('Expose Vanity URL Route Application') {
-                        sh "oc get route app |egrep -v NAME |awk '{print \$1}' > route.txt"
+                      stage('Create Application Vanity URL') {
+                        sh "oc get route/${appRoute} |egrep -v NAME |awk '{print \$1}' > route.txt"
                         route = readFile('route.txt').trim()
-                        if (route == "app") {
+                        if (route == "${appRoute}") {
                           echo "Vanity URL already deployed"
                         } else if (route == "") {
-                            sh "oc get route ${appBlueName} --template='{{ .spec.host }}' |cut -f2- -d. > domain.txt"
+                            sh "oc get route/${appBlueName} -o jsonpath='{ .spec.host }' |cut -f2- -d. > domain.txt"
                             subdomain = readFile('domain.txt').trim()
-                            sh "oc expose svc/${appBlueName} --name=app --hostname=app.${subdomain}"
+                            sh "oc expose svc/${appBlueName} --name=${appRoute} --hostname=${appRoute}.${subdomain}"
                         }
                       }
 
-                      stage('Build HTTPD Blue Container Image') {
+                      stage('Build Blue-App HTTPD Container Image') {
                         userInput = input(message: 'Do you wish to Build/Rebuild?', ok: 'Proceed',
                         parameters: [booleanParam(defaultValue: false,
                         description: 'Ticking YES will start a build',
@@ -107,7 +108,7 @@ objects:
                           waitUntil {
                             script {
                               def buildnum = readFile('result.txt').trim()
-                              def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
+                              def buildst = sh script: "oc get $buildnum -o jsonpath='{ .status.phase }' > buildst.txt"
                               def r = readFile('buildst.txt').trim()
                               r == "Complete"
                             }
@@ -117,7 +118,7 @@ objects:
                         }
                       }
 
-                      stage('Build HTTPD Green Container Image') {
+                      stage('Build Green-App HTTPD Container Image') {
                         userInput = input(message: 'Do you wish to Build/Rebuild?', ok: 'Proceed',
                         parameters: [booleanParam(defaultValue: false,
                         description: 'Ticking YES will start a build',
@@ -129,7 +130,7 @@ objects:
                           waitUntil {
                             script {
                               def buildnum = readFile('result.txt').trim()
-                              def buildst = sh script: "oc get $buildnum |egrep -v STATUS |awk '{print \$4}'> buildst.txt"
+                              def buildst = sh script: "oc get $buildnum -o jsonpath='{ .status.phase }' > buildst.txt"
                               def r = readFile('buildst.txt').trim()
                               r == "Complete"
                             }
@@ -139,27 +140,27 @@ objects:
                         }
                       }
 
-                      stage('Determine Active Application Color ') {
-                        sh "oc get route app -o jsonpath='{ .spec.to.name }' > activesvc.txt"
+                      stage('Determine Active Application Branch') {
+                        sh "oc get route/${appRoute} -o jsonpath='{ .spec.to.name }' > activesvc.txt"
                         active = readFile('activesvc.txt').trim()
                         if (active == "${appBlueName}") {
                           dest = "${appGreenName}"
                         } else if (active == "${appGreenName}") {
                             dest = "${appBlueName}"
                         }
-                        echo "Active Application: " + active
-                        echo "Destination Application: " + dest
+                        echo "Active Application Branch: " + active
+                        echo "Destination Application Branch: " + dest
                       }
 
-                      stage('Switch to different Application Color') {
+                      stage('Switch Application Branch') {
                         userInput = input(message: 'Do you wish to switch?', ok: 'Proceed',
                         parameters: [booleanParam(defaultValue: false,
-                        description: 'Ticking YES will switch application',
+                        description: "Ticking YES will switch application from the ${active} branch to the ${dest} branch",
                         name: 'YES?')])
                         sh "echo ${userInput} > userInput.txt"
                         t = readFile('userInput.txt').trim()
                         if (t == "true") {
-                          sh 'oc patch route app -p \'{"spec":{"to":{"name":"' + dest + '"}}}\''
+                          sh 'oc patch route/${appRoute} -p \'{"spec":{"to":{"name":"' + dest + '"}}}\''
                         } else if (t == "false") {
                             echo "Skipping"
                         }
@@ -235,6 +236,11 @@ parameters:
     name: APPLICATION_ID
     required: true
     value: httpd-blue-green
+  -
+    description: "Main route of the application"
+    name: APPLICATION_ROUTE
+    required: true
+    value: app
   -
     description: "The requested CPU for a build or deployment"
     name: CPU_REQUEST
