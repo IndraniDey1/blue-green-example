@@ -3,9 +3,7 @@ A Blue-Green HTTPD deployment via a Jenkins pipeline & OpenShift
 
 This example will deploy 2 HTTPD applications labeled blue-app and green-app (branches).
 
-Each application gets its own URL (route/blue-app will serve content from the blue container and route/green-app will serve content from the green container)  
-
-as well as a vanity URL that can be used to serve content from either the blue-app or the green-app.
+Each application gets its own URL (route/blue-app will serve content from the blue container and route/green-app will serve content from the green container), as well as a vanity URL that can be used to serve content from either the blue-app or the green-app.
 
 ## Dependencies
 OpenShift >= 4.1
