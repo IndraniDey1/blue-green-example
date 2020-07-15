@@ -160,7 +160,7 @@ objects:
                         sh "echo ${userInput} > userInput.txt"
                         t = readFile('userInput.txt').trim()
                         if (t == "true") {
-                          sh 'oc patch route/${appRoute} -p \'{"spec":{"to":{"name":"' + dest + '"}}}\''
+                          sh 'oc patch route/"' + appRoute + '" -p \'{"spec":{"to":{"name":"' + dest + '"}}}\''
                         } else if (t == "false") {
                             echo "Skipping"
                         }
